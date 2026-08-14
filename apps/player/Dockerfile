@@ -7,8 +7,7 @@ ENV NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_PROGRESS=false \
     NPM_CONFIG_LOGLEVEL=error
 COPY apps/player/package*.json ./
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --prefer-offline --maxsockets=3
+RUN npm ci --prefer-offline --maxsockets=3
 COPY apps/player/ ./
 ARG VITE_API_URL
 ARG VITE_SOCKET_URL
