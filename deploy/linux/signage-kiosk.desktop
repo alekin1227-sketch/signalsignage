@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Corporate Signage Player
+Exec=chromium --kiosk --noerrdialogs --disable-infobars --no-first-run http://SERVIDOR:8081
+X-GNOME-Autostart-enabled=true

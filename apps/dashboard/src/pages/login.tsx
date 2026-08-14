@@ -1,0 +1,11 @@
+import { FormEvent, useEffect, useState } from 'react';
+import { Radio } from 'lucide-react';
+import { API_URL, api } from '../lib/api';
+import { Button, Card, Input } from '../components/ui';
+
+export function Login(){
+  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[health,setHealth]=useState<'checking'|'online'|'offline'>('checking');
+  useEffect(()=>{api<{status:string}>('/health').then(()=>setHealth('online')).catch(()=>setHealth('offline'))},[]);
+  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setError('');setBusy(true);const form=new FormData(event.currentTarget);try{const result=await api<{accessToken:string;user:{id:string;name:string;email:string;role:string}}>('/auth/login',{method:'POST',body:JSON.stringify({email:form.get('email'),password:form.get('password')})});localStorage.setItem('accessToken',result.accessToken);localStorage.setItem('currentUser',JSON.stringify(result.user));location.href='/'}catch(event){setError((event as Error).message)}finally{setBusy(false)}}
+  return <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/.25),transparent_35%)] p-4"><Card className="w-full max-w-md p-8"><div className="mb-6"><span className="mb-4 grid h-12 w-12 place-items-center rounded-xl bg-primary text-white"><Radio/></span><h1 className="text-2xl font-bold">Acessar painel</h1><p className="mt-1 text-sm text-slate-500">Gerencie suas TVs, playlists e horários.</p></div><div className={`mb-4 rounded-lg border p-3 text-xs ${health==='online'?'border-emerald-500/30 bg-emerald-500/10 text-emerald-600':health==='offline'?'border-red-500/30 bg-red-500/10 text-red-500':'bg-muted text-slate-500'}`}><p className="font-semibold">{health==='online'?'API conectada':health==='offline'?'API indisponível':'Verificando servidor...'}</p><p className="mt-1 break-all opacity-80">{API_URL}</p></div><form onSubmit={submit} className="space-y-4"><Input name="email" type="email" placeholder="E-mail" required/><Input name="password" type="password" placeholder="Senha" required/>{error&&<p className="text-sm text-red-500">{error}</p>}<Button className="w-full" disabled={busy}>{busy?'Entrando...':'Entrar'}</Button></form></Card></main>;
+}

@@ -1,0 +1,40 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "br.com.corporatesignage.player"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "br.com.corporatesignage.player"
+        minSdk 22
+        targetSdk 35
+        versionCode 3
+        versionName "1.2.0"
+
+        // Use o IP real do servidor na rede. O parâmetro identifica este cliente.
+        buildConfigField "String", "PLAYER_URL", '"http://10.10.10.6:8081/?source=fire-tv"'
+        buildConfigField "String", "API_URL", '"http://10.10.10.6:3000/api"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

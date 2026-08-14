@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+uploads/*
+!uploads/.gitkeep
+media-inbox/*
+!media-inbox/.gitkeep
+*.log
+*.tsbuildinfo
+apps/**/vite.config.js
+apps/**/vite.config.d.ts
+.DS_Store
+apps/fire-tv-player/.gradle/
+apps/fire-tv-player/local.properties
+apps/fire-tv-player/app/build/

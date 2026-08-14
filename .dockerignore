@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.gradle
+**/*.tsbuildinfo
+.git
+.env
+.env.*
+!.env.example
+uploads
+media-inbox/*
+!media-inbox/.gitkeep
+*.zip
+*.log

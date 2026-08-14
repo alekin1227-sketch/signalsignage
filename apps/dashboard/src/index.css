@@ -1,0 +1,4 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+:root { --background: 220 23% 97%; --foreground: 222 47% 11%; --card: 0 0% 100%; --border: 220 14% 90%; --primary: 217 91% 60%; --muted: 220 14% 94%; --accent: 188 86% 53%; }
+.dark { --background: 222 47% 7%; --foreground: 210 40% 98%; --card: 222 40% 11%; --border: 217 25% 20%; --primary: 213 94% 68%; --muted: 217 28% 15%; --accent: 188 86% 53%; }
+* { @apply border-border; } body { @apply m-0 bg-background text-foreground antialiased; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }

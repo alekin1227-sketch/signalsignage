@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Corporate Signage</string>
+    <string name="connecting">Conectando ao Player…</string>
+    <string name="connection_error">Não foi possível acessar:\n%1$s\n\nPressione OK para tentar novamente. Para configurar, pressione Menu (☰) ou segure Voltar.</string>
+    <string name="settings_title">Configurações do Player</string>
+    <string name="settings_help">Rede local: use o IP e as portas 8081/3000. Internet: prefira domínio com HTTPS. Menu (☰) abre esta tela a qualquer momento.</string>
+    <string name="player_url_hint">Player: http://10.10.10.6:8081</string>
+    <string name="api_url_hint">API: http://10.10.10.6:3000/api</string>
+    <string name="location_hint">Nome/local: TV Recepção</string>
+    <string name="invalid_address">Informe um endereço HTTP ou HTTPS válido.</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save_and_connect">Salvar e conectar</string>
+</resources>

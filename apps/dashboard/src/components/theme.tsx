@@ -1,0 +1,2 @@
+import { Moon, Sun } from 'lucide-react'; import { useEffect, useState } from 'react'; import { Button } from './ui';
+export function ThemeToggle() { const [dark,setDark]=useState(()=>localStorage.theme==='dark'); useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.theme=dark?'dark':'light'},[dark]); return <Button variant="ghost" onClick={()=>setDark(!dark)} aria-label="Alternar tema">{dark?<Sun size={18}/>:<Moon size={18}/>}</Button>; }

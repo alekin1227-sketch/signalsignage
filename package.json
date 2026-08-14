@@ -1,0 +1,20 @@
+{
+  "name": "corporate-signage",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev:api": "npm run start:dev -w @signage/api",
+    "dev:dashboard": "npm run dev -w @signage/dashboard",
+    "dev:player": "npm run dev -w @signage/player",
+    "build": "npm run build --workspaces --if-present",
+    "db:migrate": "npm run prisma:migrate -w @signage/api",
+    "db:seed": "npm run prisma:seed -w @signage/api"
+  },
+  "engines": { "node": ">=20" }
+  ,"overrides": {
+    "@nestjs/common": "11.1.29",
+    "@nestjs/core": "11.1.29",
+    "multer": "2.1.2"
+  }
+}
