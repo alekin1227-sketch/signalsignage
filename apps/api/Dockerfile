@@ -8,8 +8,7 @@ ENV NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_LOGLEVEL=error
 RUN apk add --no-cache openssl libc6-compat ffmpeg poppler-utils
 COPY apps/api/package*.json ./
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --prefer-offline --maxsockets=3
+RUN npm ci --prefer-offline --maxsockets=3
 COPY apps/api/ ./
 RUN npm run prisma:generate && npm run build
 
