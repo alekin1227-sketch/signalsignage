@@ -14,7 +14,7 @@ type Playlist={id:string;name:string;description?:string;items:Item[];loop:boole
 function SortableItem({item,onRemove,onDuration,onAutomatic}:{item:Item;onRemove:()=>void;onDuration:(n:number)=>void;onAutomatic:()=>void}){
   const {attributes,listeners,setNodeRef,transform,transition}=useSortable({id:item.id});
   const automatic=item.media.type==='VIDEO'&&item.useMediaDuration===true;
-  return <div ref={setNodeRef} style={{transform:CSS.Transform.toString(transform),transition}} className="flex items-center gap-3 rounded-lg border bg-card p-3">
+  return <div ref={setNodeRef} style={{transform:CSS.Transform.toString(transform),transition}} className="sortable-row flex items-center gap-3 rounded-lg border bg-card p-3">
     <button {...attributes} {...listeners} className="cursor-grab text-slate-400" aria-label="Arrastar"><GripVertical/></button>
     <span className="grid h-10 w-10 place-items-center rounded bg-muted">{item.media.type==='VIDEO'?<Video size={18}/>:item.media.type==='PDF'?<FileText size={18}/>:item.media.type==='FEED'?<Newspaper size={18}/>:item.media.type==='WIDGET'?<LayoutDashboard size={18}/>:<Image size={18}/>}</span>
     <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.media.name}</span>
@@ -84,8 +84,8 @@ export function Playlists(){
   }
 
   return <>
-    <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
-      <div><h1 className="text-3xl font-bold">Playlists</h1><p className="text-slate-500">Crie, visualize e organize o conteúdo de cada programação.</p></div>
+    <div className="page-heading">
+      <div><span className="eyebrow">Sequenciamento de conteúdo</span><h1>Playlists</h1><p>Crie, visualize e organize a experiência exibida em cada tela.</p></div>
       <Button onClick={newPlaylist}><Plus size={17}/>Nova playlist</Button>
     </div>
 
@@ -95,7 +95,7 @@ export function Playlists(){
         const automaticCount=playlist.items.filter(item=>item.media.type==='VIDEO'&&item.useMediaDuration).length;
         const unknownAutomatic=playlist.items.some(item=>item.media.type==='VIDEO'&&item.useMediaDuration&&!item.media.durationSec);
         const duration=playlist.items.reduce((total,item)=>total+(item.useMediaDuration&&item.media.durationSec?item.media.durationSec:item.durationSec),0);
-        return <button key={playlist.id} onClick={()=>selectPlaylist(playlist)} className={`rounded-xl border p-4 text-left transition hover:bg-muted ${selectedId===playlist.id?'border-primary ring-2 ring-primary/20':'bg-background'}`}>
+        return <button key={playlist.id} onClick={()=>selectPlaylist(playlist)} className={`saved-tile rounded-xl border p-4 text-left transition hover:bg-muted ${selectedId===playlist.id?'is-selected':'bg-background'}`}>
           <div className="mb-4 flex items-start justify-between"><span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/15 text-primary"><ListVideo size={18}/></span><span onClick={event=>event.stopPropagation()}><Button type="button" variant="ghost" className="h-8 px-2" onClick={()=>removePlaylist(playlist)}><Trash2 size={15}/></Button></span></div>
           <p className="truncate font-semibold">{playlist.name}</p>
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500"><span>{playlist.items.length} itens</span><span className="flex items-center gap-1"><Clock size={12}/>{unknownAutomatic?'duração automática':`${duration}s`}{automaticCount?` · ${automaticCount} auto`:''}</span><span>{playlist.loop!==false?'Loop ligado':'Loop desligado'}</span></div>
@@ -103,7 +103,7 @@ export function Playlists(){
       })}</div>:<div className="rounded-xl border border-dashed p-8 text-center text-sm text-slate-500">Nenhuma playlist salva. Clique em “Nova playlist” para começar.</div>}
     </Card>
 
-    <div className="mb-5 flex flex-wrap gap-3">
+    <div className="page-toolbar">
       <Input className="max-w-sm" value={name} onChange={event=>setName(event.target.value)} placeholder="Nome da playlist"/>
       <label className="flex h-10 items-center gap-2 rounded-lg border bg-card px-3 text-sm"><input type="checkbox" checked={loop} onChange={event=>setLoop(event.target.checked)}/><span>Repetir em looping</span></label>
       <Button onClick={save} disabled={busy||!items.length||!name.trim()}><Save size={17}/>{busy?'Salvando...':'Salvar playlist'}</Button>
