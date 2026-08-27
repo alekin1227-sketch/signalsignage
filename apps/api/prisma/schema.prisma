@@ -30,6 +30,7 @@ enum MediaType {
 
 enum WidgetTemplate {
   INFORMATIVE_DASHBOARD
+  POWER_BI
   NEWS
   WEATHER
   KPI

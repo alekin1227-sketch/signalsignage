@@ -3,13 +3,16 @@ import { MediaType } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import { execFile } from 'child_process';
 import { lookup } from 'dns/promises';
-import { createReadStream, existsSync, mkdirSync, statSync } from 'fs';
-import { copyFile, readdir, rename, stat, unlink } from 'fs/promises';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, statSync } from 'fs';
+import { copyFile, readFile, readdir, rename, rm, stat, unlink, writeFile } from 'fs/promises';
 import { basename, extname, join, parse } from 'path';
+import { pipeline } from 'stream/promises';
 const sharp = require('sharp') as typeof import('sharp').sharp;
 import { XMLParser } from 'fast-xml-parser';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateFeedMediaDto, CreateUrlMediaDto, UpdateMediaDto } from './dto';
+import { CreateFeedMediaDto, CreateUrlMediaDto, StartChunkedUploadDto, UpdateMediaDto } from './dto';
+
+type ChunkedUploadMetadata = StartChunkedUploadDto & { id: string; createdAt: string };
 
 @Injectable()
 export class MediaService {
@@ -25,8 +28,95 @@ export class MediaService {
   private readonly documentExtensions = new Set(['.pdf']);
   readonly dir = process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads');
   readonly inboxDir = process.env.MEDIA_INBOX_DIR ?? join(process.cwd(), 'media-inbox');
+  readonly chunkDir = join(this.dir, '.chunks');
+  readonly chunkTempDir = join(this.dir, '.chunk-temp');
   private readonly feedCache = new Map<string, { expiresAt: number; value: unknown }>();
-  constructor(private prisma: PrismaService) { mkdirSync(join(this.dir, 'thumbs'), { recursive: true }); mkdirSync(this.inboxDir, { recursive: true }); }
+  constructor(private prisma: PrismaService) {
+    mkdirSync(join(this.dir, 'thumbs'), { recursive: true });
+    mkdirSync(this.inboxDir, { recursive: true });
+    mkdirSync(this.chunkDir, { recursive: true });
+    mkdirSync(this.chunkTempDir, { recursive: true });
+  }
+
+  private uploadSessionPath(id: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new BadRequestException('Identificador de upload inválido');
+    return join(this.chunkDir, id);
+  }
+
+  private async uploadMetadata(id: string): Promise<ChunkedUploadMetadata> {
+    try { return JSON.parse(await readFile(join(this.uploadSessionPath(id), 'metadata.json'), 'utf8')); }
+    catch { throw new NotFoundException('Upload não encontrado ou expirado'); }
+  }
+
+  async startChunkedUpload(dto: StartChunkedUploadDto) {
+    const originalName = basename(dto.originalName.trim());
+    if (!originalName || originalName !== dto.originalName.trim()) throw new BadRequestException('Nome de arquivo inválido');
+    const extension = extname(originalName).toLowerCase();
+    if (!this.imageExtensions.has(extension) && !this.videoExtensions.has(extension) && !this.documentExtensions.has(extension)) {
+      throw new BadRequestException('Formato não aceito. Use imagem, vídeo ou PDF');
+    }
+    const id = randomUUID();
+    const directory = this.uploadSessionPath(id);
+    mkdirSync(directory, { recursive: true });
+    const metadata: ChunkedUploadMetadata = { ...dto, originalName, id, createdAt: new Date().toISOString() };
+    await writeFile(join(directory, 'metadata.json'), JSON.stringify(metadata), { encoding: 'utf8', mode: 0o600 });
+    return { uploadId: id, chunkSizeBytes: 50 * 1024 * 1024, totalParts: dto.totalParts };
+  }
+
+  async storeChunk(id: string, partNumber: number, totalParts: number, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Parte do arquivo obrigatória');
+    try {
+      const metadata = await this.uploadMetadata(id);
+      if (metadata.totalParts !== totalParts || partNumber >= totalParts) throw new BadRequestException('Numeração das partes não corresponde ao upload');
+      if (file.size > 60 * 1024 * 1024) throw new BadRequestException('Cada parte pode ter no máximo 60 MB');
+      const destination = join(this.uploadSessionPath(id), `part-${String(partNumber).padStart(5, '0')}`);
+      await rename(file.path, destination);
+      const receivedParts = (await readdir(this.uploadSessionPath(id))).filter(name => name.startsWith('part-')).length;
+      return { uploadId: id, partNumber, receivedParts, totalParts, progress: Math.round(receivedParts / totalParts * 100) };
+    } catch (error) {
+      await unlink(file.path).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async completeChunkedUpload(id: string) {
+    const metadata = await this.uploadMetadata(id);
+    const directory = this.uploadSessionPath(id);
+    const parts = (await readdir(directory)).filter(name => name.startsWith('part-')).sort();
+    if (parts.length !== metadata.totalParts) throw new BadRequestException(`Upload incompleto: ${parts.length} de ${metadata.totalParts} partes recebidas`);
+    const assembledName = `${randomUUID()}${extname(metadata.originalName).toLowerCase()}`;
+    const assembledPath = join(this.dir, assembledName);
+    let assembledSize = 0;
+    try {
+      for (const part of parts) {
+        const partPath = join(directory, part);
+        assembledSize += (await stat(partPath)).size;
+        await pipeline(createReadStream(partPath), createWriteStream(assembledPath, { flags: 'a' }));
+      }
+      if (assembledSize !== metadata.sizeBytes) throw new BadRequestException('O tamanho final não corresponde ao arquivo original');
+      const media = await this.createFile({
+        path: assembledPath, filename: assembledName, originalname: metadata.originalName,
+        mimetype: metadata.mimeType, size: assembledSize,
+      } as Express.Multer.File, metadata.name);
+      await rm(directory, { recursive: true, force: true });
+      return media;
+    } catch (error) {
+      await unlink(assembledPath).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async chunkedUploadStatus(id: string) {
+    const metadata = await this.uploadMetadata(id);
+    const parts = (await readdir(this.uploadSessionPath(id))).filter(name => name.startsWith('part-'));
+    return { uploadId: id, receivedParts: parts.length, totalParts: metadata.totalParts, progress: Math.round(parts.length / metadata.totalParts * 100) };
+  }
+
+  async abortChunkedUpload(id: string) {
+    await this.uploadMetadata(id);
+    await rm(this.uploadSessionPath(id), { recursive: true, force: true });
+    return { deleted: true };
+  }
 
   list() { return this.prisma.media.findMany({ orderBy: { createdAt: 'desc' } }); }
 

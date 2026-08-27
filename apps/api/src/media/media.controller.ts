@@ -8,7 +8,7 @@ import { createReadStream, existsSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/roles';
 import { UserRole } from '@prisma/client';
-import { CreateFeedMediaDto, CreateUrlMediaDto, ImportInboxMediaDto, UpdateMediaDto } from './dto';
+import { CreateFeedMediaDto, CreateUrlMediaDto, ImportInboxMediaDto, StartChunkedUploadDto, UpdateMediaDto, UploadChunkQueryDto } from './dto';
 import { MediaService } from './media.service';
 
 @Controller('media')
@@ -35,6 +35,20 @@ export class MediaController {
   @Post('upload') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR)
   @UseInterceptors(FileInterceptor('file', { storage: diskStorage({ destination: process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads'), filename: (_req, file, cb) => cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`) }), limits: { fileSize: 2 * 1024 * 1024 * 1024 } }))
   upload(@UploadedFile() file: Express.Multer.File, @Query('name') name?: string) { return this.media.createFile(file, name); }
+  @Post('uploads/start') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  startUpload(@Body() dto: StartChunkedUploadDto) { return this.media.startChunkedUpload(dto); }
+  @Post('uploads/:id/part') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @UseInterceptors(FileInterceptor('chunk', {
+    storage: diskStorage({ destination: (_req, _file, cb) => { const path = process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads'); const temp = join(path, '.chunk-temp'); require('fs').mkdirSync(temp, { recursive: true }); cb(null, temp); }, filename: (_req, _file, cb) => cb(null, randomUUID()) }),
+    limits: { fileSize: 60 * 1024 * 1024 },
+  }))
+  uploadPart(@Param('id') id: string, @Query() query: UploadChunkQueryDto, @UploadedFile() file: Express.Multer.File) { return this.media.storeChunk(id, query.partNumber, query.totalParts, file); }
+  @Get('uploads/:id/status') @UseGuards(JwtAuthGuard, RolesGuard)
+  uploadStatus(@Param('id') id: string) { return this.media.chunkedUploadStatus(id); }
+  @Post('uploads/:id/complete') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  completeUpload(@Param('id') id: string) { return this.media.completeChunkedUpload(id); }
+  @Delete('uploads/:id') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  abortUpload(@Param('id') id: string) { return this.media.abortChunkedUpload(id); }
   @Post('url') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR) createUrl(@Body() dto: CreateUrlMediaDto) { return this.media.createUrl(dto); }
   @Post('feed') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR) createFeed(@Body() dto: CreateFeedMediaDto) { return this.media.createFeed(dto); }
   @Post('inbox/import') @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN, UserRole.EDITOR) importInbox(@Body() dto: ImportInboxMediaDto) { return this.media.importInbox(dto.fileName, dto.name); }

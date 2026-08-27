@@ -31,11 +31,96 @@ type DashboardSettings = {
   newsEndpoint: string;
 };
 
+type PowerBiSettings = {
+  mode: 'PUBLIC' | 'EMBEDDED';
+  workspaceId: string;
+  reportId: string;
+  pageName: string;
+  showFilterPane: boolean;
+  showNavigation: boolean;
+};
+
 @Injectable()
 export class WidgetService {
   private readonly cache = new Map<string, { expiresAt: number; value: WidgetView }>();
 
   constructor(private readonly prisma: PrismaService, private readonly media: MediaService) {}
+
+  private powerBiSettings(config: WidgetConfigDto | UpdateWidgetDto): PowerBiSettings {
+    const mapping = config.mapping && typeof config.mapping === 'object'
+      ? config.mapping as Record<string, unknown>
+      : {};
+    const mode = mapping.mode === 'EMBEDDED' ? 'EMBEDDED' : 'PUBLIC';
+    const workspaceId = String(mapping.workspaceId ?? '').trim();
+    const reportId = String(mapping.reportId ?? '').trim();
+    const pageName = String(mapping.pageName ?? '').trim().slice(0, 160);
+    if (mode === 'PUBLIC') {
+      let endpoint: URL;
+      try { endpoint = new URL(config.endpoint); }
+      catch { throw new BadRequestException('Informe um link válido do Power BI'); }
+      if (endpoint.protocol !== 'https:' || endpoint.hostname.toLowerCase() !== 'app.powerbi.com') {
+        throw new BadRequestException('O link público deve começar com https://app.powerbi.com/');
+      }
+    } else {
+      if (!/^[0-9a-f-]{36}$/i.test(workspaceId) || !/^[0-9a-f-]{36}$/i.test(reportId)) {
+        throw new BadRequestException('Workspace ID e Report ID devem ser GUIDs válidos do Power BI');
+      }
+      for (const key of ['POWERBI_TENANT_ID', 'POWERBI_CLIENT_ID', 'POWERBI_CLIENT_SECRET']) {
+        if (!process.env[key]) throw new BadRequestException(`${key} não está configurada no servidor`);
+      }
+    }
+    return {
+      mode, workspaceId, reportId, pageName,
+      showFilterPane: mapping.showFilterPane === true,
+      showNavigation: mapping.showNavigation !== false,
+    };
+  }
+
+  private async powerBiAccessToken() {
+    const tenantId = process.env.POWERBI_TENANT_ID!;
+    const body = new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: process.env.POWERBI_CLIENT_ID!,
+      client_secret: process.env.POWERBI_CLIENT_SECRET!,
+      scope: 'https://analysis.windows.net/powerbi/api/.default',
+    });
+    const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body,
+      signal: AbortSignal.timeout(15_000),
+    });
+    const result = await response.json().catch(() => null) as any;
+    if (!response.ok || !result?.access_token) {
+      throw new BadRequestException(result?.error_description || 'A Microsoft recusou as credenciais do Power BI');
+    }
+    return String(result.access_token);
+  }
+
+  private async powerBiPayload(config: WidgetConfigDto | UpdateWidgetDto) {
+    const settings = this.powerBiSettings(config);
+    if (settings.mode === 'PUBLIC') return {
+      mode: 'PUBLIC', embedUrl: config.endpoint, pageName: settings.pageName,
+      showFilterPane: false, showNavigation: settings.showNavigation,
+    };
+    const accessToken = await this.powerBiAccessToken();
+    const base = `https://api.powerbi.com/v1.0/myorg/groups/${encodeURIComponent(settings.workspaceId)}/reports/${encodeURIComponent(settings.reportId)}`;
+    const headers = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+    const [reportResponse, tokenResponse] = await Promise.all([
+      fetch(base, { headers, signal: AbortSignal.timeout(15_000) }),
+      fetch(`${base}/GenerateToken`, {
+        method: 'POST', headers, body: JSON.stringify({ accessLevel: 'View' }),
+        signal: AbortSignal.timeout(15_000),
+      }),
+    ]);
+    const report = await reportResponse.json().catch(() => null) as any;
+    const token = await tokenResponse.json().catch(() => null) as any;
+    if (!reportResponse.ok || !report?.embedUrl) throw new BadRequestException(report?.error?.message || 'Relatório Power BI não encontrado');
+    if (!tokenResponse.ok || !token?.token) throw new BadRequestException(token?.error?.message || 'Não foi possível gerar o token de incorporação');
+    return {
+      mode: 'EMBEDDED', reportId: settings.reportId, embedUrl: report.embedUrl,
+      accessToken: token.token, expiresAt: token.expiration, pageName: settings.pageName,
+      showFilterPane: settings.showFilterPane, showNavigation: settings.showNavigation,
+    };
+  }
 
   private dashboardSettings(mapping: unknown): DashboardSettings {
     const input = mapping && typeof mapping === 'object' ? mapping as Record<string, any> : {};
@@ -394,7 +479,7 @@ export class WidgetService {
     const map = config.mapping as Record<string, any>;
     const field = (key: string, root: unknown = payload) => this.select(root, map[key]);
     let data: unknown;
-    if (config.template === 'INFORMATIVE_DASHBOARD') {
+    if (config.template === 'INFORMATIVE_DASHBOARD' || config.template === 'POWER_BI') {
       data = payload;
     } else if (config.template === 'NEWS') {
       data = { title: map.title || name, items: this.repeat(payload, map.repeatPath).map(item => ({
@@ -426,7 +511,9 @@ export class WidgetService {
   }
 
   async preview(dto: WidgetConfigDto) {
-    const sample = dto.template === 'INFORMATIVE_DASHBOARD' ? await this.dashboardPayload(dto) : await this.request(dto);
+    const sample = dto.template === 'INFORMATIVE_DASHBOARD'
+      ? await this.dashboardPayload(dto)
+      : dto.template === 'POWER_BI' ? await this.powerBiPayload(dto) : await this.request(dto);
     return { sample, view: this.normalize(dto.name, dto, sample) };
   }
 
@@ -437,7 +524,9 @@ export class WidgetService {
   }
 
   async create(dto: WidgetConfigDto) {
-    if (dto.template === 'INFORMATIVE_DASHBOARD') await this.dashboardPayload(dto); else await this.request(dto);
+    if (dto.template === 'INFORMATIVE_DASHBOARD') await this.dashboardPayload(dto);
+    else if (dto.template === 'POWER_BI') this.powerBiSettings(dto);
+    else await this.request(dto);
     return this.prisma.$transaction(async tx => {
       const media = await tx.media.create({ data: { name: dto.name.trim(), type: MediaType.WIDGET, feedRefreshSec: dto.refreshSeconds } });
       return tx.dataWidget.create({ data: {
@@ -451,7 +540,9 @@ export class WidgetService {
   async update(id: string, dto: UpdateWidgetDto) {
     const current = await this.prisma.dataWidget.findUnique({ where: { id } });
     if (!current) throw new NotFoundException('Widget não encontrado');
-    if (dto.template === 'INFORMATIVE_DASHBOARD') await this.dashboardPayload(dto); else await this.request(dto);
+    if (dto.template === 'INFORMATIVE_DASHBOARD') await this.dashboardPayload(dto);
+    else if (dto.template === 'POWER_BI') this.powerBiSettings(dto);
+    else await this.request(dto);
     this.cache.delete(id);
     return this.prisma.$transaction(async tx => {
       await tx.media.update({ where: { id: current.mediaId }, data: { name: dto.name.trim(), feedRefreshSec: dto.refreshSeconds } });
@@ -477,7 +568,9 @@ export class WidgetService {
     if (cached && cached.expiresAt > Date.now()) return cached.value;
     const config = { ...widget, name: widget.media.name, mapping: widget.mapping as Record<string, unknown>, style: widget.style as Record<string, unknown> } as unknown as WidgetConfigDto;
     try {
-      let payload = config.template === 'INFORMATIVE_DASHBOARD' ? await this.dashboardPayload(config) : await this.request(config);
+      let payload = config.template === 'INFORMATIVE_DASHBOARD'
+        ? await this.dashboardPayload(config)
+        : config.template === 'POWER_BI' ? await this.powerBiPayload(config) : await this.request(config);
       if (config.template === 'INFORMATIVE_DASHBOARD' && cached) {
         const next = payload as Record<string, any>;
         const previous = cached.value.data as Record<string, any>;

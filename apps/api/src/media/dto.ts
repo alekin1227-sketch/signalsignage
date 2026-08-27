@@ -21,3 +21,16 @@ export class ImportInboxMediaDto {
   @IsString() fileName!: string;
   @IsOptional() @IsString() name?: string;
 }
+
+export class StartChunkedUploadDto {
+  @IsString() originalName!: string;
+  @IsString() mimeType!: string;
+  @IsInt() @Min(1) @Max(2 * 1024 * 1024 * 1024) sizeBytes!: number;
+  @IsInt() @Min(1) @Max(10000) totalParts!: number;
+  @IsOptional() @IsString() name?: string;
+}
+
+export class UploadChunkQueryDto {
+  @IsInt() @Min(0) @Max(9999) partNumber!: number;
+  @IsInt() @Min(1) @Max(10000) totalParts!: number;
+}

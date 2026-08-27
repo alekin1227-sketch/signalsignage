@@ -56,6 +56,9 @@ MEDIA_INBOX_DIR=/app/inbox
 TZ=America/Sao_Paulo
 PUBLIC_API_URL=https://ENDERECO-DA-API
 CORS_ORIGINS=https://ENDERECO-DO-DASHBOARD,https://ENDERECO-DO-PLAYER
+POWERBI_TENANT_ID=
+POWERBI_CLIENT_ID=
+POWERBI_CLIENT_SECRET=
 ```
 
 O nome do banco no projeto pode não ser exatamente `Postgres`. Ao inserir `DATABASE_URL`, use a referência sugerida pela interface do Railway para o serviço PostgreSQL criado.
@@ -101,6 +104,7 @@ As variáveis `VITE_*` entram durante a compilação. Depois de alterá-las, use
 RAILWAY_DOCKERFILE_PATH=apps/player/Dockerfile
 VITE_API_URL=https://SEU-DOMINIO-DA-API/api
 VITE_SOCKET_URL=https://SEU-DOMINIO-DA-API
+VITE_PLAYER_CACHE_MAX_MB=2048
 ```
 
 5. Gere um domínio público com porta de destino `80`.

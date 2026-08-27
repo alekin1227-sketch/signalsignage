@@ -21,6 +21,11 @@ flowchart TD
 - `apps/player`: player React leve, Service Worker, Cache Storage, polling e Socket.io.
 - `deploy`: inicialização automática em modo kiosk no Windows e Linux.
 
+Guias adicionais:
+
+- [Cloudflare Tunnel no Mini PC](CLOUDFLARE.md)
+- [Widget Power BI público e Embedded](POWERBI.md)
+
 O navegador não pode ler MAC Address por segurança. Cada instalação gera um `hardwareId` persistente e recebe um token aleatório de 256 bits. O banco guarda somente o SHA-256 do token.
 
 O gerador de `hardwareId` possui fallback compatível com acesso por IP em HTTP e navegadores kiosk antigos; ele não depende exclusivamente de `crypto.randomUUID()`.
@@ -142,6 +147,8 @@ O botão **Tocar agora** é persistente e confiável: a ordem é salva no Postgr
 ### Gerador automático para JSON, RSS e Atom
 
 O cadastro de API foi retirado da página **Mídias**. Toda fonte dinâmica agora é criada em **Widgets de dados**, evitando a duplicidade entre Feed e Widget.
+
+O menu independente **Power BI** cadastra relatórios como widgets. Ele aceita link público para dados de demonstração e Power BI Embedded com token automático para relatórios corporativos privados. Consulte [POWERBI.md](POWERBI.md).
 
 1. Abra **Widgets de dados → Novo widget**.
 2. Informe um nome e cole a URL de uma API JSON, RSS 2.0 ou Atom.

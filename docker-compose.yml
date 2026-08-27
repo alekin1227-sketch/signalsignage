@@ -53,10 +53,18 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL}
         VITE_SOCKET_URL: ${VITE_SOCKET_URL}
+        VITE_PLAYER_CACHE_MAX_MB: ${VITE_PLAYER_CACHE_MAX_MB:-2048}
     restart: unless-stopped
     ports:
       - "8081:80"
     depends_on: [api]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on: [api, dashboard, player]
 
 volumes:
   postgres_data:
