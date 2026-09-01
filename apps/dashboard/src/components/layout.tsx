@@ -1,4 +1,4 @@
-import { Activity, BarChart3, CalendarClock, ChevronRight, Cpu, Images, KeyRound, LayoutDashboard, ListVideo, LogOut, Menu, Monitor, Radio, UsersRound, X } from 'lucide-react';
+import { Activity, BarChart3, CalendarClock, ChevronRight, Cpu, Images, KeyRound, LayoutDashboard, ListVideo, LogOut, Menu, Monitor, PlugZap, Radio, UsersRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './theme';
@@ -13,7 +13,7 @@ export function Layout(){
   const user=session(),route=useLocation(),[mobileOpen,setMobileOpen]=useState(false);
   const links=[
     ['/','Visão geral',BarChart3],['/devices','Dispositivos',Monitor],['/media','Mídias',Images],
-    ['/widgets','Widgets de dados',LayoutDashboard],['/power-bi','Power BI',Activity],
+    ['/widgets','Widgets de dados',LayoutDashboard],['/power-bi','Power BI',Activity],['/integrations','Integrações e API',PlugZap],
     ['/playlists','Playlists',ListVideo],['/schedules','Programação',CalendarClock],
     ...(user?.role==='ADMIN'?[['/player-access','Acessos do Player',KeyRound] as const,['/users','Usuários do Painel',UsersRound] as const]:[]),
   ] as const;

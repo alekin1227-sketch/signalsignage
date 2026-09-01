@@ -40,6 +40,27 @@ enum WidgetTemplate {
   LIST
 }
 
+enum IntegrationType {
+  POWER_BI
+  REST_API
+  PROTHEUS
+  WEBHOOK
+}
+
+enum IntegrationAuthType {
+  NONE
+  BEARER
+  API_KEY
+  BASIC
+}
+
+enum IntegrationStatus {
+  UNTESTED
+  ONLINE
+  DEGRADED
+  OFFLINE
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -130,6 +151,28 @@ model DataWidget {
   updatedAt        DateTime       @updatedAt
 
   @@index([enabled])
+}
+
+model Integration {
+  id             String              @id @default(cuid())
+  name           String
+  description    String?
+  type           IntegrationType
+  baseUrl        String
+  authType       IntegrationAuthType @default(NONE)
+  authHeaderName String?
+  authEnvVar     String?
+  metadata       Json?
+  enabled        Boolean             @default(true)
+  lastStatus     IntegrationStatus   @default(UNTESTED)
+  lastLatencyMs  Int?
+  lastTestAt     DateTime?
+  lastMessage    String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([type, enabled])
+  @@index([lastStatus])
 }
 
 model Playlist {

@@ -267,7 +267,7 @@ export class WidgetService {
       if (typeof item === 'string' && item.length <= 300) result[key] = item;
     }
     return {
-      primaryColor: '#1769b0', accentColor: '#ffad2f', backgroundColor: '#06182b',
+      primaryColor: '#0f63a9', accentColor: '#faa931', backgroundColor: '#052947',
       textColor: '#ffffff', mutedColor: '#b8cadb', logoUrl: '/somai-logo.png', companyName: 'Somai Alimentos',
       ...result,
     };

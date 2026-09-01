@@ -25,6 +25,7 @@ Guias adicionais:
 
 - [Cloudflare Tunnel no Mini PC](CLOUDFLARE.md)
 - [Widget Power BI público e Embedded](POWERBI.md)
+- [Prompt didático para o modo Study](PROMPT-MODO-STUDY.md)
 
 O navegador não pode ler MAC Address por segurança. Cada instalação gera um `hardwareId` persistente e recebe um token aleatório de 256 bits. O banco guarda somente o SHA-256 do token.
 
@@ -91,6 +92,34 @@ Se a senha do administrador for esquecida, defina uma nova `ADMIN_PASSWORD` no `
 3. Em **Programação**, selecione a TV, playlist, dias, horário e prioridade.
 4. Em **Dispositivos**, acompanhe online/offline e o item em exibição.
 5. Para uma comunicação urgente, selecione uma playlist no card da TV e clique em **Tocar agora**. O comando fica salvo no servidor até você clicar em **Voltar à programação**.
+6. Em **Integrações e API**, cadastre e teste conexões com Power BI, Protheus, APIs REST e Webhooks. O painel registra estado, latência e último diagnóstico.
+
+### Central de Integrações e API
+
+A Central de Integrações separa a configuração da conexão da criação do conteúdo visual. Ela permite:
+
+- cadastrar Power BI, Protheus, API REST ou Webhook;
+- testar a conexão diretamente no servidor;
+- medir latência e registrar o último resultado;
+- ativar e desativar integrações;
+- usar Bearer Token, API Key ou Basic Auth;
+- guardar somente o nome da variável de ambiente, nunca a credencial real;
+- abrir a documentação Swagger da API pelo próprio Dashboard.
+
+Exemplo para um endpoint interno do Protheus:
+
+```env
+INTEGRATION_PRIVATE_HOST_ALLOWLIST=protheus.empresa.local,10.10.10.20
+INTEGRATION_SECRET_PROTHEUS=usuario:senha
+```
+
+No painel, selecione **Protheus**, informe a URL REST, escolha a autenticação e use `INTEGRATION_SECRET_PROTHEUS` como referência. O valor real permanece exclusivamente no `.env` da API.
+
+Depois de atualizar esta versão, aplique a migração que cria a tabela de integrações:
+
+```bash
+docker compose exec api npm run prisma:deploy
+```
 
 Ao excluir uma mídia, URL ou feed que esteja em uma playlist, o sistema remove automaticamente todas as referências, reorganiza a ordem dos itens restantes e informa quantas playlists foram atualizadas.
 

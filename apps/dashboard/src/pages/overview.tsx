@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
-import { Activity, CalendarClock, Cloud, Database, HardDrive, Image, Monitor, Radio, Wifi } from 'lucide-react';
+import { Activity, CalendarClock, Cloud, Database, HardDrive, Image, Monitor, PlugZap, Radio, Wifi } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui';
 
 ChartJS.register(ArcElement,Tooltip,Legend);
-type Stats={media:number;devices:number;online:number;schedules:number;mediaByType:{image:number;video:number;pdf:number;url:number;feed:number;widget:number}};
+type Stats={media:number;devices:number;online:number;schedules:number;integrations:number;integrationsOnline:number;mediaByType:{image:number;video:number;pdf:number;url:number;feed:number;widget:number}};
 
 export function Overview(){
   const [stats,setStats]=useState<Stats>(),[error,setError]=useState('');
@@ -18,6 +18,7 @@ export function Overview(){
     {label:'TVs online',value:`${stats?.online??0}/${stats?.devices??0}`,detail:`${onlineRate}% da rede ativa`,icon:Wifi,tone:'green'},
     {label:'Dispositivos',value:stats?.devices??'—',detail:'Players cadastrados',icon:Monitor,tone:'cyan'},
     {label:'Programações',value:stats?.schedules??'—',detail:'regras configuradas',icon:CalendarClock,tone:'gold'},
+    {label:'Integrações',value:`${stats?.integrationsOnline??0}/${stats?.integrations??0}`,detail:'APIs e BI conectados',icon:PlugZap,tone:'blue'},
   ];
   return <>
     <div className="page-heading"><div><span className="eyebrow">Centro de comando</span><h1>Visão geral</h1><p>Acompanhe a rede de telas, conteúdos e programações da SOMAI.</p></div><div className="live-indicator"><i/><span>Atualização em tempo real</span></div></div>

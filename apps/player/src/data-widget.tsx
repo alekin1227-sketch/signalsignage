@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { PowerBiWidget } from './power-bi-widget';
 
 type View={id?:string;name:string;template:'INFORMATIVE_DASHBOARD'|'POWER_BI'|'NEWS'|'WEATHER'|'KPI'|'KPI_GRID'|'MARKET_TICKER'|'TABLE'|'LIST';refreshSeconds:number;updatedAt:string;stale?:boolean;style:Record<string,string>;data:any};
-const fallbackStyle={primaryColor:'#1769b0',accentColor:'#ffad2f',backgroundColor:'#06182b',textColor:'#fff',mutedColor:'#b8cadb',logoUrl:'/somai-logo.png',companyName:'Somai Alimentos'};
+const fallbackStyle={primaryColor:'#0f63a9',accentColor:'#faa931',backgroundColor:'#052947',textColor:'#fff',mutedColor:'#b8cadb',logoUrl:'/somai-logo.png',companyName:'Somai Alimentos'};
 function format(value:any,digits=1){const n=Number(value);return Number.isFinite(n)?new Intl.NumberFormat('pt-BR',{maximumFractionDigits:digits}).format(n):String(value??'—')}
 function weather(code:any){const value=Number(code);if(value===0)return {icon:'☀',label:'Céu limpo'};if(value<=3)return {icon:'⛅',label:'Parcialmente nublado'};if(value>=51&&value<=67)return {icon:'🌧',label:'Chuva'};if(value>=71&&value<=77)return {icon:'❄',label:'Neve'};if(value>=80&&value<=82)return {icon:'🌦',label:'Pancadas de chuva'};if(value>=95)return {icon:'⛈',label:'Tempestade'};return {icon:'🌤',label:'Condição atual'}}
 

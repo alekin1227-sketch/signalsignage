@@ -16,7 +16,7 @@ const moduleInfo:Record<ModuleKey,{label:string;description:string;icon:typeof C
   DATETIME:{label:'Data e hora',description:'Relógio atualizado na TV',icon:Gauge},
 };
 const defaultDashboard={modules:['NEWS','WEATHER','MARKET','DATETIME'] as ModuleKey[],city:'Montes Claros - MG',marketRegion:'TODOS',marketMode:'RELEVANT',assetCount:15,customSymbols:[],tickerEnabled:true,tickerSpeed:'NORMAL',newsRotationSeconds:10,marketRotationSeconds:10,newsEndpoint:'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml'};
-const baseStyle={primaryColor:'#1769b0',accentColor:'#ffad2f',backgroundColor:'#06182b',textColor:'#ffffff',mutedColor:'#b8cadb',logoUrl:'/somai-logo.png',companyName:'Somai Alimentos'};
+const baseStyle={primaryColor:'#0f63a9',accentColor:'#faa931',backgroundColor:'#052947',textColor:'#ffffff',mutedColor:'#b8cadb',logoUrl:'/somai-logo.png',companyName:'Somai Alimentos'};
 const templateInfo:Record<Template,{label:string;description:string;icon:typeof CloudSun}>={
   INFORMATIVE_DASHBOARD:{label:'Tela informativa',description:'Vários cards em uma tela',icon:LayoutDashboard}, NEWS:{label:'Notícias',description:'Destaques com imagem',icon:Newspaper}, WEATHER:{label:'Clima',description:'Temperatura e previsão',icon:CloudSun}, KPI:{label:'Indicador',description:'Um número em destaque',icon:Gauge}, KPI_GRID:{label:'Painel de metas',description:'Vários indicadores',icon:BarChart3}, MARKET_TICKER:{label:'Mercado',description:'Ações e variações',icon:LineChart}, TABLE:{label:'Tabela',description:'Dados em linhas e colunas',icon:Table2}, LIST:{label:'Lista',description:'Avisos e comunicados',icon:List},
 };

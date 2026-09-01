@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { BarChart3, CheckCircle2, Eye, KeyRound, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, X } from 'lucide-react';
+import { BarChart3, CheckCircle2, Eye, KeyRound, Link2, Pencil, Plus, RefreshCw, ServerCog, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Button, Card, Input } from '../components/ui';
 
@@ -24,6 +25,7 @@ type PowerBiWidget = {
   media: { id: string; name: string };
 };
 type Preview = { data: { mode: Mode; embedUrl: string; expiresAt?: string } };
+type Integration = { id:string; type:string; name:string; lastStatus:'UNTESTED'|'ONLINE'|'DEGRADED'|'OFFLINE'; lastMessage?:string; lastTestAt?:string };
 
 const emptyMapping: PowerBiMapping = {
   mode: 'PUBLIC', workspaceId: '', reportId: '', pageName: '',
@@ -42,9 +44,11 @@ export function PowerBiPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
 
   const powerBiItems = useMemo(() => items.filter(item => item.template === 'POWER_BI'), [items]);
-  const load = () => api<PowerBiWidget[]>('/widgets').then(setItems).catch(cause => setError(cause.message));
+  const powerBiConnection = useMemo(() => integrations.find(item => item.type === 'POWER_BI'), [integrations]);
+  const load = () => Promise.all([api<PowerBiWidget[]>('/widgets'),api<Integration[]>('/integrations')]).then(([widgets,connections])=>{setItems(widgets);setIntegrations(connections)}).catch(cause => setError(cause.message));
   useEffect(() => { void load(); }, []);
 
   function reset() {
@@ -62,7 +66,7 @@ export function PowerBiPage() {
       : endpoint;
     return {
       name: name.trim(), endpoint: resolvedEndpoint, template: 'POWER_BI', refreshSeconds,
-      mapping, style: { backgroundColor: '#03111f', primaryColor: '#13a8e4', accentColor: '#f5b942' },
+      mapping, style: { backgroundColor: '#052947', primaryColor: '#0f63a9', accentColor: '#faa931' },
       enabled: true,
     };
   }
@@ -97,11 +101,14 @@ export function PowerBiPage() {
       <Button onClick={() => begin()}><Plus size={17}/>Novo relatório</Button>
     </div>
     {error && <div className="notice notice-error">{error}</div>}
-    <section className="grid gap-4 md:grid-cols-3">
+    <section className="grid gap-4 md:grid-cols-4">
       <Card className="metric-card"><BarChart3/><div><span>Relatórios cadastrados</span><strong>{powerBiItems.length}</strong></div></Card>
-      <Card className="metric-card"><ShieldCheck/><div><span>Integração segura</span><strong>App owns data</strong></div></Card>
+      <Card className="metric-card"><ShieldCheck/><div><span>Modo seguro</span><strong>App owns data</strong></div></Card>
       <Card className="metric-card"><RefreshCw/><div><span>Tokens</span><strong>Renovação automática</strong></div></Card>
+      <Card className="metric-card"><ServerCog/><div><span>Conexão Microsoft</span><strong>{powerBiConnection?.lastStatus==='ONLINE'?'Validada':powerBiConnection?.lastStatus==='OFFLINE'?'Com erro':'Pendente'}</strong></div></Card>
     </section>
+
+    <Card className="bi-guide mt-6 overflow-hidden"><div className="section-heading"><div><span className="eyebrow">Configuração orientada</span><h2>Como o relatório chega às TVs</h2><p>Use o link compartilhado para conteúdo público ou o Embedded para dados internos protegidos.</p></div><Link2 size={20}/></div><div className="bi-guide-grid"><div><span>01</span><strong>Validar a Microsoft</strong><p>Cadastre Power BI na Central de Integrações e teste Tenant ID, Client ID e Client Secret.</p></div><div><span>02</span><strong>Cadastrar o relatório</strong><p>Cole o link público ou informe Workspace ID e Report ID do painel criado pela equipe de BI.</p></div><div><span>03</span><strong>Adicionar à playlist</strong><p>O relatório vira um widget e pode receber duração, horário e TV como qualquer outra mídia.</p></div><div className="bi-guide-action"><div><b>{powerBiConnection?.lastStatus==='ONLINE'?'Integração pronta':'Integração ainda não validada'}</b><small>{powerBiConnection?.lastMessage||'Abra a Central de Integrações para configurar e testar o Power BI.'}</small></div><Button asChild variant="outline"><Link to="/integrations"><ServerCog size={15}/>Abrir integrações</Link></Button></div></div></Card>
 
     <Card className="mt-6 overflow-hidden">
       <div className="section-heading"><div><h2>Widgets Power BI</h2><p>Depois de salvar, adicione o widget normalmente em Playlists.</p></div></div>

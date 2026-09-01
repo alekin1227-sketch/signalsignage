@@ -11,13 +11,14 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { UsersModule } from './users/users.module';
 import { PlayerAccessModule } from './player-access/player-access.module';
 import { WidgetModule } from './widget/widget.module';
+import { IntegrationModule } from './integration/integration.module';
 import { HealthController } from './health.controller';
 
 @Module({
   controllers: [HealthController],
   imports: [
     PrismaModule, AuthModule, MediaModule,
-    PlaylistModule, DeviceModule, ScheduleModule, PlayerModule, RealtimeModule, DashboardModule, UsersModule, PlayerAccessModule, WidgetModule,
+    PlaylistModule, DeviceModule, ScheduleModule, PlayerModule, RealtimeModule, DashboardModule, UsersModule, PlayerAccessModule, WidgetModule, IntegrationModule,
   ],
 })
 export class AppModule {}

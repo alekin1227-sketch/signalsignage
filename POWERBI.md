@@ -2,6 +2,18 @@
 
 O Signal Signage oferece dois modos no menu **Power BI**.
 
+Antes de cadastrar um relatório privado, abra **Integrações e API**, crie uma conexão do tipo **Power BI** e clique em **Testar**. Esse teste é executado pela API e confirma se `POWERBI_TENANT_ID`, `POWERBI_CLIENT_ID` e `POWERBI_CLIENT_SECRET` conseguem autenticar no Microsoft Entra ID. O painel mostra o último estado, a latência e a mensagem da Microsoft sem revelar o segredo.
+
+## Relatórios criados pela equipe de BI
+
+Se outra pessoa da empresa já desenvolve os painéis usando dados do Protheus, o Signal Signage não precisa recriar esses indicadores. A equipe de BI fornece uma destas opções:
+
+- link **Publicar na Web**, apenas para conteúdo que pode ser público;
+- `Workspace ID` e `Report ID`, para o modo Embedded seguro;
+- link privado comum, que exigirá login Microsoft na TV e por isso não é o método recomendado para sinalização digital.
+
+Depois do cadastro, o relatório vira uma mídia do tipo widget. Basta adicioná-lo a uma playlist, escolher o tempo de exibição e programar a TV.
+
 ## Link público
 
 Use somente para relatórios sem informação confidencial:
@@ -63,3 +75,19 @@ Player → Power BI (renderização pelo SDK oficial)
 ```
 
 As chamadas do relatório vão diretamente da TV para a Microsoft. O Cloudflare Tunnel transporta somente o Player, a fila e a pequena resposta de configuração.
+
+## Relação entre Protheus, API e Power BI
+
+Existem dois fluxos possíveis:
+
+```text
+Protheus → Power BI da empresa → Widget Power BI → Player da TV
+```
+
+Nesse caso, a equipe de BI já consulta e modela os dados do Protheus. O Signal Signage recebe apenas o relatório pronto.
+
+```text
+Protheus REST → API Signal Signage → Widget próprio → Player da TV
+```
+
+Nesse segundo caso, o Signal Signage consulta um endpoint REST do Protheus e transforma o JSON em cards, tabelas, listas ou indicadores. Cadastre primeiro o endpoint em **Integrações e API** para validar autenticação e disponibilidade; depois use a URL em **Widgets de dados**.
