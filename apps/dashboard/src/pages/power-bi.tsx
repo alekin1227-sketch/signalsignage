@@ -18,19 +18,43 @@ type PowerBiWidget = {
   endpoint: string;
   template: string;
   refreshSeconds: number;
-  mapping: PowerBiMapping;
+  mapping?: Partial<PowerBiMapping> | null;
   enabled: boolean;
   lastSuccessAt?: string;
   lastError?: string;
-  media: { id: string; name: string };
+  media?: { id: string; name: string };
 };
-type Preview = { data: { mode: Mode; embedUrl: string; expiresAt?: string } };
+type PowerBiPreviewData = {
+  mode: Mode;
+  embedUrl: string;
+  expiresAt?: string;
+  pageName?: string;
+  showFilterPane?: boolean;
+  showNavigation?: boolean;
+};
+type Preview = {
+  sample?: PowerBiPreviewData;
+  view?: { data?: PowerBiPreviewData };
+  data?: PowerBiPreviewData;
+};
 type Integration = { id:string; type:string; name:string; lastStatus:'UNTESTED'|'ONLINE'|'DEGRADED'|'OFFLINE'; lastMessage?:string; lastTestAt?:string };
 
 const emptyMapping: PowerBiMapping = {
   mode: 'PUBLIC', workspaceId: '', reportId: '', pageName: '',
   showFilterPane: false, showNavigation: true,
 };
+
+function normalizeMapping(value: PowerBiWidget['mapping']): PowerBiMapping {
+  const mapping = value && typeof value === 'object' ? value : {};
+  return {
+    mode: mapping.mode === 'EMBEDDED' ? 'EMBEDDED' : 'PUBLIC',
+    workspaceId: typeof mapping.workspaceId === 'string' ? mapping.workspaceId : '',
+    reportId: typeof mapping.reportId === 'string' ? mapping.reportId : '',
+    pageName: typeof mapping.pageName === 'string' ? mapping.pageName : '',
+    showFilterPane: mapping.showFilterPane === true,
+    showNavigation: mapping.showNavigation !== false,
+  };
+}
 
 export function PowerBiPage() {
   const [items, setItems] = useState<PowerBiWidget[]>([]);
@@ -48,7 +72,11 @@ export function PowerBiPage() {
 
   const powerBiItems = useMemo(() => items.filter(item => item.template === 'POWER_BI'), [items]);
   const powerBiConnection = useMemo(() => integrations.find(item => item.type === 'POWER_BI'), [integrations]);
-  const load = () => Promise.all([api<PowerBiWidget[]>('/widgets'),api<Integration[]>('/integrations')]).then(([widgets,connections])=>{setItems(widgets);setIntegrations(connections)}).catch(cause => setError(cause.message));
+  const previewData = preview?.sample ?? preview?.view?.data ?? preview?.data ?? null;
+  const load = () => Promise.all([api<PowerBiWidget[]>('/widgets'),api<Integration[]>('/integrations')]).then(([widgets,connections])=>{
+    setItems(Array.isArray(widgets) ? widgets : []);
+    setIntegrations(Array.isArray(connections) ? connections : []);
+  }).catch(cause => setError(cause instanceof Error ? cause.message : 'Não foi possível carregar os relatórios.'));
   useEffect(() => { void load(); }, []);
 
   function reset() {
@@ -56,8 +84,8 @@ export function PowerBiPage() {
     setRefreshSeconds(300); setPreview(null); setError(''); setMessage(''); setOpen(false);
   }
   function begin(item?: PowerBiWidget) {
-    setEditing(item ?? null); setName(item?.media.name ?? 'Painel Power BI'); setEndpoint(item?.endpoint ?? '');
-    setMapping({ ...emptyMapping, ...(item?.mapping ?? {}) }); setRefreshSeconds(item?.refreshSeconds ?? 300);
+    setEditing(item ?? null); setName(item?.media?.name ?? 'Painel Power BI'); setEndpoint(item?.endpoint ?? '');
+    setMapping(normalizeMapping(item?.mapping)); setRefreshSeconds(item?.refreshSeconds ?? 300);
     setPreview(null); setError(''); setMessage(''); setOpen(true);
   }
   function payload() {
@@ -89,7 +117,7 @@ export function PowerBiPage() {
     finally { setBusy(false); }
   }
   async function remove(item: PowerBiWidget) {
-    if (!confirm(`Excluir o widget “${item.media.name}”? Ele também será retirado das playlists.`)) return;
+    if (!confirm(`Excluir o widget “${item.media?.name ?? 'Relatório Power BI'}”? Ele também será retirado das playlists.`)) return;
     setError('');
     try { await api(`/widgets/${item.id}`, { method: 'DELETE' }); await load(); }
     catch (cause) { setError((cause as Error).message); }
@@ -113,12 +141,15 @@ export function PowerBiPage() {
     <Card className="mt-6 overflow-hidden">
       <div className="section-heading"><div><h2>Widgets Power BI</h2><p>Depois de salvar, adicione o widget normalmente em Playlists.</p></div></div>
       {powerBiItems.length === 0 ? <div className="empty-state"><BarChart3/><strong>Nenhum relatório cadastrado</strong><p>Comece com um link público de demonstração ou configure o modo Embedded seguro.</p><Button onClick={() => begin()}><Plus size={16}/>Cadastrar primeiro relatório</Button></div>
-        : <div className="data-list">{powerBiItems.map(item => <article key={item.id}>
-          <div className={`integration-icon ${item.mapping.mode === 'EMBEDDED' ? 'secure' : ''}`}><BarChart3/></div>
-          <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><strong className="truncate">{item.media.name}</strong><span className="status-chip">{item.mapping.mode === 'EMBEDDED' ? 'Embedded seguro' : 'Link público'}</span></div><p>{item.mapping.mode === 'EMBEDDED' ? `Workspace ${item.mapping.workspaceId.slice(0, 8)}…` : item.endpoint}</p>{item.lastError && <small className="text-red-500">{item.lastError}</small>}</div>
-          <Button variant="ghost" title="Editar" onClick={() => begin(item)}><Pencil size={16}/></Button>
-          <Button variant="ghost" title="Excluir" onClick={() => remove(item)}><Trash2 size={16}/></Button>
-        </article>)}</div>}
+        : <div className="data-list">{powerBiItems.map(item => {
+          const itemMapping = normalizeMapping(item.mapping);
+          return <article key={item.id}>
+            <div className={`integration-icon ${itemMapping.mode === 'EMBEDDED' ? 'secure' : ''}`}><BarChart3/></div>
+            <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><strong className="truncate">{item.media?.name ?? 'Relatório Power BI'}</strong><span className="status-chip">{itemMapping.mode === 'EMBEDDED' ? 'Embedded seguro' : 'Link público'}</span></div><p>{itemMapping.mode === 'EMBEDDED' ? itemMapping.workspaceId ? `Workspace ${itemMapping.workspaceId.slice(0, 8)}…` : 'Workspace não informado' : item.endpoint}</p>{item.lastError && <small className="text-red-500">{item.lastError}</small>}</div>
+            <Button variant="ghost" title="Editar" onClick={() => begin(item)}><Pencil size={16}/></Button>
+            <Button variant="ghost" title="Excluir" onClick={() => remove(item)}><Trash2 size={16}/></Button>
+          </article>;
+        })}</div>}
     </Card>
 
     {open && <div className="modal-backdrop" onMouseDown={event => event.currentTarget === event.target && reset()}><Card className="modal-card">
@@ -141,7 +172,8 @@ export function PowerBiPage() {
         </div>
         {mapping.mode === 'EMBEDDED' && <div className="flex flex-wrap gap-5"><label className="check-label"><input type="checkbox" checked={mapping.showNavigation} onChange={event => setMapping(value => ({ ...value, showNavigation: event.target.checked }))}/>Navegação de páginas</label><label className="check-label"><input type="checkbox" checked={mapping.showFilterPane} onChange={event => setMapping(value => ({ ...value, showFilterPane: event.target.checked }))}/>Painel de filtros</label></div>}
         {message && <div className="notice notice-success"><CheckCircle2 size={17}/>{message}</div>}
-        {preview?.data.mode === 'PUBLIC' && <div className="powerbi-preview"><iframe src={preview.data.embedUrl} title="Prévia do Power BI"/></div>}
+        {previewData?.mode === 'PUBLIC' && <div className="powerbi-preview"><iframe src={previewData.embedUrl} title="Prévia do Power BI"/></div>}
+        {previewData?.mode === 'EMBEDDED' && <div className="notice notice-success"><ShieldCheck size={17}/><span>Relatório privado validado. A visualização segura será carregada diretamente no Player da TV.</span></div>}
         <div className="flex justify-end gap-3"><Button type="button" variant="outline" onClick={test} disabled={busy}><Eye size={16}/>{busy ? 'Validando…' : 'Testar conexão'}</Button><Button disabled={busy}><CheckCircle2 size={16}/>{editing ? 'Salvar alterações' : 'Criar widget'}</Button></div>
       </form>
     </Card></div>}
